@@ -286,7 +286,7 @@ if (!require("BiocManager", quietly = TRUE))
 Alternatively, you could compress the correlated variable using dimension reduction.  However, it's no free lunch since you need to do all the scaling and missing data processing before you can apply PCA and you need to decide how many components to include.  pcaMethods package offers a way to fit a model even in the presence of missing data.
 
 ```{r}
-BiocManager::install("pcaMethods")
+#BiocManager::install("pcaMethods")
 library(pcaMethods)
 
 pca_numeric<-pcaMethods::pca(numeric_vars,nPcs=20,scale="uv")
@@ -328,8 +328,8 @@ You will use the framework of tidymodel workflow, which will run these transform
 
 Since you've worked on it in MA679 please copy and paste your best model here.  
 ```{r,echo=TRUE}
-##
-##
+glm.fit <- lm(log(SalePrice) ~ `Year Remod/Add` + `Year Built` + `Lot Area` + `Garage Area` + `Gr Liv Area` + `Year Remod/Add`:`Year Built`, data = ames_raw_2008)
+glm.fit
 ```
 
 Your answer:
@@ -343,8 +343,32 @@ Please write your answer in full sentences.
 Please perform feature engineering on the Ames housing data that you think will help with the prediction.
 
 ```{r,echo=TRUE}
-##
-##
+# Feature Scaling
+ames_raw_2008$Lot_Area_scaled <- scale(ames_raw_2008$`Lot Area`)
+ames_raw_2008$Garage_Area_scaled <- scale(ames_raw_2008$`Garage Area`)
+ames_raw_2008$Gr_Liv_Area_scaled <- scale(ames_raw_2008$`Gr Liv Area`)
+
+# Feature Transformation
+ames_raw_2008$Lot_Area_log <- log(ames_raw_2008$`Lot Area`)
+ames_raw_2008$Garage_Area_log <- log(ames_raw_2008$`Garage Area`)
+ames_raw_2008$Gr_Liv_Area_log <- log(ames_raw_2008$`Gr Liv Area`)
+
+# Dummy Variables
+ames_raw_2008_1 <- model.matrix(~ Neighborhood + `Exterior 1st` + `Exterior 2nd` - 1, data = ames_raw_2008)
+
+# Combining Features
+ames_raw_2008$Total_Bathrooms <- ames_raw_2008$`Full Bath` + (0.5 * ames_raw_2008$`Half Bath`)
+
+# Interaction Terms
+ames_raw_2008$Year_Remod_Built_interaction <- ames_raw_2008$`Year Remod/Add` * ames_raw_2008$`Year Built`
+
+# Fit full model
+selected_columns <- ames_raw_2008[, c("Year Remod/Add", "Year Built", "Lot_Area_log","Garage_Area_log","Gr_Liv_Area_log","Year_Remod_Built_interaction","SalePrice")]
+selected_columns <- na.omit(selected_columns)
+selected_columns <- selected_columns[apply(selected_columns, 1, function(row) !any(is.infinite(row))), , drop = FALSE]
+full_model <-lm(log(SalePrice) ~ `Year Remod/Add` + `Year Built` + Lot_Area_log + Garage_Area_log + Gr_Liv_Area_log + Year_Remod_Built_interaction, data = selected_columns)
+
+
 ```
 
 Your answer:
@@ -358,15 +382,17 @@ Please write your answer in full sentences.
 Compare the result before and after the feature engineering step.
 
 ```{r,echo=TRUE}
-##
-##
+s1 <- summary(full_model)
+s1
+s2 <- summary(glm.fit)
+s2
 ```
 
 
 Your answer:
 
 ~~~
-Please write your answer in full sentences.
+According to the R-squared value, the model after feature engerineering is better than the original model.
 
 
 ~~~
